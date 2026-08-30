@@ -1,0 +1,7 @@
+*.class
+out/
+.venv/
+__pycache__/
+*.pyc
+src/com/company/test_cases.txt
+.DS_Store
