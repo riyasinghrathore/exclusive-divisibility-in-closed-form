@@ -4,4 +4,6 @@ out/
 __pycache__/
 *.pyc
 src/com/company/test_cases.txt
+test_cases.txt
+cpp/benchmark
 .DS_Store
