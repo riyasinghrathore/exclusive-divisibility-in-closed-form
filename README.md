@@ -49,17 +49,15 @@ For `a=2, b=3` the qualifying integers start `2, 3, 4, 8, 9, 10, 14, 15, 16, ...
 ## What's in this repo
 
 ```
-src/com/company/
-  Main.java               — both approaches + benchmark harness (original)
-  TestCaseGenerator.java  — generates random (a, b, n) triples under the
-                            constraints above
-src/termboost/
+src/algorithm/
   algorithms.py           — Python port: brute_force, binary_search, formula
-  testgen.py              — Python test-case generator (mirrors the Java one)
+  testgen.py              — Python test-case generator
+
 cpp/
   benchmark.cpp           — third independent implementation (C++), with its
                             own self-test + benchmark harness
   README.md               — build/run instructions for the C++ benchmark
+
 tests/
   test_correctness.py     — pytest suite: exhaustive small-grid, period
                             boundaries, validity/rank, and 50k large random
