@@ -8,7 +8,7 @@ divisible by exactly one of two coprime integers `a`, `b`: an existing
 
 The full written derivation (with an interactive visual proof you can drive
 with sliders) lives on my site:
-**[TermBoost: The n-th Coprime-Exclusive Multiple in O(1)](https://TODO-replace-with-your-live-site-domain/articles/termboost-nth-coprime-multiple.html)**
+**[The n-th Coprime-Exclusive Multiple in O(1)](https://riyasinghrathore.github.io/articles/exclusive-multiples-closed-form.html)**
 <!-- TODO: this repo isn't wired to a deployed URL yet — swap in the real
      domain once the site is live. Until then, the article source is at
      research-site/articles/termboost-nth-coprime-multiple.html. -->
