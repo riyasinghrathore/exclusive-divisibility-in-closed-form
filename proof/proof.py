@@ -20,17 +20,34 @@ written derivation at:
      v0 = n*a*b/(a+b) that the closed-form formula's rat_a/rat_b terms
      are built from.
 
-  2. NUMERIC — brute-force-checks the formula (true_n_smallest_ab)
+  2. EXACT LEMMA — upgrades the "bounded margin, so two candidates"
+     hand-wave of step 1(b) into an exact identity. Because gcd(a,b)=1
+     forces gcd(a+b,a)=gcd(a+b,b)=1, for every residual r in [1, a+b-2]
+
+         floor(r*b/(a+b)) + floor(r*a/(a+b)) = r - 1,
+
+     so after i = floor(r*b/(a+b)) multiples of a and j = floor(r*a/(a+b))
+     multiples of b we have consumed exactly r-1 qualifying terms, and the
+     r-th is EXACTLY min(a*(i+1), b*(j+1)) — no error term. This section
+     verifies the lemma and confirms the clean form agrees with the Java
+     port true_n_smallest_ab across a large grid.
+
+  3. NUMERIC — brute-force-checks the formula (true_n_smallest_ab)
      against the definition (nth_term_bruteforce) across thousands of
      random coprime (a, b) pairs and a spread of n, i.e. an exhaustive
      verification rather than a hand proof of every branch.
 
-  3. GRAPHICAL — renders the periodic block structure the formula
+  4. GRAPHICAL — renders the periodic block structure the formula
      exploits (window size ab, exactly a+b-2 qualifying terms per
-     window), the count(x) staircase against the target n, and the
+     window), the count(x) staircase against the target n, the exact
+     lemma (i+j = r-1 and its fractional-part twin), and the
      "two-candidate margin" between the continuous relaxation v0 and
      the true integer answer that the final min/comparison step picks
      between.
+
+The same formula is independently exercised by the C++ native benchmark
+(cpp/benchmark.cpp) and the pytest suite (tests/test_correctness.py); see
+../README.md.
 
 Run:
     python3 proof/proof.py
@@ -137,6 +154,22 @@ def true_n_smallest_ab(a, b, n):
         return a * rat_a + a + filler
 
 
+def clean_n_smallest_ab(a, b, n):
+    """The lemma-based closed form proved exact in exact_lemma_check().
+
+    Strip whole periods (p = a+b-2 qualifying terms each), then inside the
+    period the r-th term is min(a*(i+1), b*(j+1)) with i+j = r-1.
+    Equivalent to true_n_smallest_ab but written in the form the proof uses.
+    """
+    s = a + b
+    p = a + b - 2
+    q, r = divmod(n - 1, p)
+    r += 1  # r in [1, p]
+    i = (r * b) // s
+    j = (r * a) // s
+    return q * (a * b) + min(a * (i + 1), b * (j + 1))
+
+
 def coprime_pairs(rng, count, max_ab=200):
     pairs = []
     while len(pairs) < count:
@@ -170,6 +203,50 @@ def numeric_cross_check(num_pairs=300, n_per_pair=15, max_n=400):
     else:
         print("  All matched. No counterexample found.\n")
     return checked, mismatches
+
+
+# ---------------------------------------------------------------------------
+# 2b. EXACT LEMMA (makes "bounded margin -> two candidates" exact)
+# ---------------------------------------------------------------------------
+
+def exact_lemma_check(max_pair=80):
+    """Verify, exactly, the identity that pins the closed form:
+
+        floor(r*b/s) + floor(r*a/s) = r - 1     for r in [1, s-2], s=a+b,
+
+    and hence that the r-th qualifying term equals min(a*(i+1), b*(j+1)).
+    We check the lemma over every coprime pair up to `max_pair`, confirm the
+    lemma-based clean form matches brute force, and confirm it matches the
+    Java-port formula true_n_smallest_ab (so both representations agree)."""
+    print("=== 2b. Exact lemma: floor(rb/s)+floor(ra/s) = r-1 ===")
+    lemma_bad = clean_vs_brute = clean_vs_java = 0
+    pairs = 0
+    for a in range(2, max_pair):
+        for b in range(a + 1, max_pair):
+            if math.gcd(a, b) != 1:
+                continue
+            pairs += 1
+            s = a + b
+            for r in range(1, s - 1):  # r in [1, s-2] = [1, p]
+                if (r * b) // s + (r * a) // s != r - 1:
+                    lemma_bad += 1
+            # clean form vs brute force and vs the Java port, over >2 periods
+            p = s - 2
+            for n in range(1, 2 * p + 4):
+                clean = clean_n_smallest_ab(a, b, n)
+                if clean != nth_term_bruteforce(a, b, n):
+                    clean_vs_brute += 1
+                if clean != true_n_smallest_ab(a, b, n):
+                    clean_vs_java += 1
+    print(f"  Coprime pairs checked: {pairs}")
+    print(f"  Lemma violations (floor(rb/s)+floor(ra/s) != r-1): {lemma_bad}")
+    print(f"  clean form vs brute force mismatches:               {clean_vs_brute}")
+    print(f"  clean form vs Java-port true_n_smallest_ab:         {clean_vs_java}")
+    reason = ("The lemma holds because gcd(a,b)=1 => gcd(a+b,a)=gcd(a+b,b)=1, "
+              "so s never divides r for 1<=r<=s-2, forcing {rb/s}+{ra/s}=1.")
+    print(f"  Why: {reason}\n")
+    assert lemma_bad == clean_vs_brute == clean_vs_java == 0
+    return pairs
 
 
 # ---------------------------------------------------------------------------
@@ -270,20 +347,52 @@ def plot_relaxation_margin(a=7, b=11, r_max=None):
           f"(bound: max(a,b) = {max(a, b)})\n")
 
 
+def plot_exact_lemma(a=7, b=11):
+    """Visualise the exact lemma: i+j = r-1, and the fractional-part twin
+    {rb/s}+{ra/s} = 1 that forces it (both over r in [1, s-2])."""
+    s = a + b
+    p = s - 2
+    rs = np.arange(1, p + 1)
+    i = (rs * b) // s
+    j = (rs * a) // s
+    frac_sum = (rs * b % s) / s + (rs * a % s) / s
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
+    ax1.plot(rs, i + j, "o-", color="#2b6cb0", label="i + j  (i=⌊rb/s⌋, j=⌊ra/s⌋)")
+    ax1.plot(rs, rs - 1, "--", color="#c05621", lw=1.4, label="r - 1")
+    ax1.set_xlabel("r (position within window)")
+    ax1.set_title("Exact lemma: ⌊rb/s⌋ + ⌊ra/s⌋ = r − 1")
+    ax1.legend(fontsize=8)
+
+    ax2.plot(rs, frac_sum, "o-", color="#805ad5")
+    ax2.axhline(1.0, color="#c05621", ls="--", lw=1.4)
+    ax2.set_ylim(0, 1.3)
+    ax2.set_xlabel("r")
+    ax2.set_ylabel("{rb/s} + {ra/s}")
+    ax2.set_title("Fractional parts pin to 1  (since gcd(s,a)=gcd(s,b)=1)")
+    fig.suptitle(f"Why min(a(i+1), b(j+1)) is exact  (a={a}, b={b}, s={s})")
+    fig.tight_layout()
+    fig.savefig(f"{FIGDIR}/exact_lemma.png", dpi=150)
+    plt.close(fig)
+
+
 def main():
     import os
     os.makedirs(FIGDIR, exist_ok=True)
 
     symbolic_flatness_argument()
     symbolic_continuous_relaxation()
+    pairs = exact_lemma_check()
     checked, mismatches = numeric_cross_check()
 
     plot_periodic_blocks()
     plot_count_staircase()
+    plot_exact_lemma()
     plot_relaxation_margin()
 
     print("=== Summary ===")
     print(f"  Symbolic flatness check: passed for all sampled (a,b) pairs.")
+    print(f"  Exact lemma: verified over {pairs} coprime pairs, 0 violations.")
     print(f"  Numeric cross-check: {checked} triples, {len(mismatches)} mismatches.")
     print(f"  Figures written to {FIGDIR}/")
     assert not mismatches, "trUE_n_Smallest_AB disagreed with brute force -- see mismatches above"

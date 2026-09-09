@@ -10,7 +10,7 @@ This module provides three implementations:
 
 * :func:`brute_force`   -- the O(answer) reference oracle.
 * :func:`binary_search` -- the existing O(log N) baseline.
-* :func:`formula`       -- the novel O(1) closed form (see ``docs/PROOF.md``).
+* :func:`formula`       -- the novel O(1) closed form (see ``PROOF.md``).
 
 The driver code enforces ``a < b``; every function assumes that ordering.
 """
@@ -73,7 +73,7 @@ def binary_search(a: int, b: int, n: int) -> int:
 
 
 def formula(a: int, b: int, n: int) -> int:
-    """Novel O(1) closed form.  Proof of correctness in ``docs/PROOF.md``.
+    """Novel O(1) closed form.  Proof of correctness in ``PROOF.md``.
 
     Structure of the proof:
 
